@@ -58,8 +58,7 @@ export default function USDLKR({ records }: USDLKRProps) {
         return extractMultiTimeSeriesData(records, ['close_bid', 'close_offer'], { days: 30 });
     }, [records]);
 
-
-
+    console.log(closeRates);
 
 
     return (
@@ -73,7 +72,7 @@ export default function USDLKR({ records }: USDLKRProps) {
 
                 {/* Header Stats - 4 Column Layout */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-                    
+                    <RateChart title="Open Rates" data={closeRates} />
                 </div>
             </div>
             
