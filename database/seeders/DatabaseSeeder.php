@@ -34,6 +34,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             LiquidityLkrDailySeeder::class,
             LiqudityFcyDailySeeder::class,
+            FixedIncomeCashflowSeeder::class,
+            FixedIncomeDailySeeder::class,
+            UsdLkrDailySeeder::class,
         ]);
     }
 }
