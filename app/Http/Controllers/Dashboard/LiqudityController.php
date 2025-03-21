@@ -13,8 +13,11 @@ class LiqudityController extends Controller
 {
     public function lkr()
     {
+        // Get the start of the current year
+        $startOfYear = Carbon::now()->startOfYear();
 
         $records = LiquidityLkrDaily::select('*')
+            ->whereDate('record_date', '>=', $startOfYear)
             ->orderBy('record_date')
             ->get()
             ->map(function ($record) {
@@ -28,6 +31,11 @@ class LiqudityController extends Controller
                     'opr' => $record->opr,
                     'call_rate' => $record->call_rate,
                     'repo_rate' => $record->repo_rate,
+                    'awplr' => $record->awplr,
+                    'awplr_boc' => $record->awplr_boc,
+                    'awdr' => $record->awdr,
+                    'awfdr' => $record->awfdr,
+                    'awndr' => $record->awndr,
                     'dst_current_acc' => $record->dst_current_acc,
                     'dst_fund_mgt_acc' => $record->dst_fund_mgt_acc,
                     'dst_seven_day' => $record->dst_seven_day,
@@ -57,8 +65,11 @@ class LiqudityController extends Controller
 
     public function fcy()
     {
+        // Get the start of the current year
+        $startOfYear = Carbon::now()->startOfYear();
 
         $records = LiqudityFcyDaily::select('*')
+            ->whereDate('record_date', '>=', $startOfYear)
             ->orderBy('record_date')
             ->get()
             ->map(function ($record) {
@@ -104,4 +115,3 @@ class LiqudityController extends Controller
         ]);
     }
 }
-

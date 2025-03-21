@@ -41,7 +41,7 @@ const mainNavItems: NavItem[] = [
     // Corporate Desk
     {
         title: 'Corporate Desk',
-        url: '#',
+        url: route('corporate.index'),
         icon: BriefcaseBusinessIcon,
     },
     // ALM

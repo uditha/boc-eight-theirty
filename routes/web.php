@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\Dashboard\LiqudityController;
 use App\Http\Controllers\Dashboard\FixedIncomeController;
 use App\Http\Controllers\Dashboard\UsdLkrController;
+use App\Http\Controllers\Dashboard\CorporateDeskController;
 
 
 Route::get('/', function () {
@@ -33,6 +34,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // usdlkr
     Route::get('/usd-lkr', [UsdLkrController::class, 'index'])
         ->name('usd-lkr.index');
+
+    // corporate
+    Route::get('/corporate', [CorporateDeskController::class, 'index'])
+    ->name('corporate.index');
 
 
 

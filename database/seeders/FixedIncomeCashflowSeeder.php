@@ -17,7 +17,7 @@ class FixedIncomeCashflowSeeder extends Seeder
         FixedIncomeCashflow::truncate();
 
         // Path to the CSV file
-        $csvFile = storage_path('public/fixed_income_cashflows.csv');
+        $csvFile = public_path('fixed_income_cashflows.csv');
 
         if (!file_exists($csvFile)) {
             $this->command->error("CSV file not found at: $csvFile");

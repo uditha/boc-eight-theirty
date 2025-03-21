@@ -32,7 +32,7 @@ class FixedIncomeDailySeeder extends Seeder
 
         // Define start and end dates
         $startDate = Carbon::create(2024, 12, 31);
-        $endDate = Carbon::create(2025, 2, 28);
+        $endDate = Carbon::create(2025, 3, 21);
 
         // Calculate number of days in range correctly
         $daysCount = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('liquidity_lkr_daily', function (Blueprint $table) {
@@ -25,6 +24,13 @@ return new class extends Migration
             // Market Rates
             $table->decimal('call_rate', 10, 4)->nullable();
             $table->decimal('repo_rate', 10, 4)->nullable();
+            $table->decimal('awplr', 10, 4)->nullable();
+            $table->decimal('awplr_boc', 10, 4)->nullable();
+            $table->decimal('awdr', 10, 4)->nullable();
+            $table->decimal('awfdr', 10, 4)->nullable();
+            $table->decimal('awndr', 10, 4)->nullable();
+
+
 
             // DST Accounts
             $table->decimal('dst_current_acc', 15, 2)->nullable();

@@ -1,8 +1,10 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { formatValue } from '@/utils/formatting';
-import { LucideIcon, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface DataPoint {
   date: string;
@@ -15,8 +17,6 @@ interface StatCardProps {
   type?: 'number' | 'percentage';
   decimalPlaces?: number;
   currency?: 'LKR' | 'USD';
-  change?: '1D' | '1W' | '1M' | '1Y';
-  icon?: LucideIcon;
   unit?: string;
   className?: string;
   showSparkline?: boolean;
@@ -28,13 +28,12 @@ function StatCard({
   type,
   decimalPlaces = 1,
   currency,
-  change = '1D',
-  icon: Icon,
   unit,
   className,
   showSparkline = true,
 }: StatCardProps) {
-  // Get the latest value from sorted data
+  const [selectedPeriod, setSelectedPeriod] = useState<'YTD' | '1M' | '1W'>('YTD');
+
   const getLatestValue = (): number | string => {
     if (!data || data.length === 0) return 0;
     const sortedData = [...data].sort((a, b) =>
@@ -43,10 +42,8 @@ function StatCard({
     return sortedData[sortedData.length - 1].value;
   };
 
-  // Find the closest date value in the dataset
   const findClosestDateValue = (data: DataPoint[], targetDate: Date): number => {
     if (data.length === 1) return Number(data[0].value);
-    
     let closestDataPoint = data[0];
     let smallestDiff = Math.abs(new Date(data[0].date).getTime() - targetDate.getTime());
     
@@ -57,11 +54,9 @@ function StatCard({
         closestDataPoint = data[i];
       }
     }
-    
     return Number(closestDataPoint.value);
   };
 
-  // Calculate change between latest value and a previous period
   const calculateChange = (): { value: number; percentage: number } => {
     if (!data || data.length < 2) return { value: 0, percentage: 0 };
     
@@ -73,12 +68,11 @@ function StatCard({
     let comparisonValue: number;
     const latestDate = new Date(sortedData[sortedData.length - 1].date);
     
-    switch (change) {
-      case '1D':
+    switch (selectedPeriod) {
+      case 'YTD':
         { 
-          const oneDayAgo = new Date(latestDate);
-          oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-          comparisonValue = findClosestDateValue(sortedData, oneDayAgo);
+          const yearStart = new Date(latestDate.getFullYear(), 0, 1);
+          comparisonValue = findClosestDateValue(sortedData, yearStart);
           break; 
         }
       case '1W':
@@ -95,13 +89,6 @@ function StatCard({
           comparisonValue = findClosestDateValue(sortedData, oneMonthAgo);
           break; 
         }
-      case '1Y':
-        { 
-          const oneYearAgo = new Date(latestDate);
-          oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-          comparisonValue = findClosestDateValue(sortedData, oneYearAgo);
-          break; 
-        }
       default:
         comparisonValue = Number(sortedData[sortedData.length - 2].value);
     }
@@ -114,28 +101,52 @@ function StatCard({
     return { value: changeValue, percentage: changePercentage };
   };
 
-  // Prepare data for sparkline chart
   const prepareChartData = () => {
     if (!data || data.length === 0) return [];
     
-    // Sort data by date
     const sortedData = [...data].sort((a, b) =>
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
     
-    // Convert to format expected by recharts
-    return sortedData.map(item => ({
+    const now = new Date(sortedData[sortedData.length - 1].date);
+    let startDate: Date;
+    
+    switch (selectedPeriod) {
+      case 'YTD':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case '1M':
+        startDate = new Date(now);
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case '1W':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), 0, 1);
+    }
+
+    const filteredData = sortedData.filter(
+      item => new Date(item.date) >= startDate
+    );
+    
+    return filteredData.map(item => ({
       date: item.date,
       value: Number(item.value)
     }));
   };
 
+  // Get and process the latest value
   const latestValue = getLatestValue();
+  const numericValue = typeof latestValue === 'string' ? parseFloat(latestValue) : latestValue;
+  const isNegativeValue = numericValue < 0;
   const formattedValue = formatValue(latestValue, {
     type,
     decimalPlaces,
   });
   
+  // Calculate change data
   const changeData = calculateChange();
   const isPositive = changeData.value >= 0;
   
@@ -144,90 +155,184 @@ function StatCard({
     decimalPlaces: 1,
   });
 
-  // Period mapping for readable text
   const periodMap = {
-    '1D': 'day',
-    '1W': 'week',
-    '1M': 'month',
-    '1Y': 'year'
+    'YTD': 'from YTD',
+    '1W': 'from prev week',
+    '1M': 'from prev month'
   };
 
   const chartData = prepareChartData();
-  
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const tooltipValue = payload[0].value;
+      const isNegativeTooltip = tooltipValue < 0;
+      
+      return (
+        <div className="bg-background/90 dark:bg-background/90 backdrop-blur-sm p-2 border dark:border-border rounded shadow-sm">
+          <p className="text-xs font-medium text-muted-foreground">
+            {new Date(label).toLocaleDateString(undefined, { 
+              year: 'numeric', 
+              month: 'short', 
+              day: 'numeric' 
+            })}
+          </p>
+          <p className={cn(
+            "text-sm font-semibold",
+            isNegativeTooltip && "text-red-600 dark:text-red-500"
+          )}>
+            {currency === 'LKR' ? 'Rs. ' : currency === 'USD' ? '$ ' : ''}
+            {tooltipValue.toLocaleString(undefined, { 
+              minimumFractionDigits: decimalPlaces,
+              maximumFractionDigits: decimalPlaces
+            })} 
+            {unit && <span className="text-xs ml-1 font-normal text-muted-foreground">{unit}</span>}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <Card className={cn(
-      "overflow-hidden transition-colors hover:bg-accent/5 gap-4", 
+      "overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700 rounded-2xl min-w-[160px]", 
       className
     )}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-        <div className="flex items-center">
-          <h3 className="text-md font-medium text-muted-foreground">
-            {title}
-          </h3>
-          <div className="flex items-center ml-2">
-            <span className="text-xs font-medium border rounded px-1 text-muted-foreground">
-              {change}
-            </span>
-          </div>
+      <CardHeader className="flex flex-row items-center justify-between gap-2 py-3 px-3">
+        <h3 className="text-sm font-medium text-slate-700 dark:text-slate-200 max-w-[130px] whitespace-nowrap overflow-hidden text-ellipsis">
+          {title}
+        </h3>
+        <div className="inline-flex rounded-md bg-slate-100 dark:bg-slate-800">
+          <Button 
+            variant={selectedPeriod === 'YTD' ? 'default' : 'ghost'} 
+            size="sm"
+            className={cn(
+              "h-6 px-2 text-xs rounded-r-none shadow-none",
+              selectedPeriod === 'YTD' ? (
+                "bg-slate-900 text-white hover:bg-slate-800 hover:text-white dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-300 dark:hover:text-slate-900"
+              ) : (
+                "dark:text-slate-300 dark:hover:text-white"
+              )
+            )}
+            onClick={() => setSelectedPeriod('YTD')}
+          >
+            YTD
+          </Button>
+          <Button 
+            variant={selectedPeriod === '1M' ? 'default' : 'ghost'} 
+            size="sm"
+            className={cn(
+              "h-6 px-2 text-xs rounded-none border-l border-r border-slate-200 dark:border-slate-700 shadow-none",
+              selectedPeriod === '1M' ? (
+                "bg-slate-900 text-white hover:bg-slate-800 hover:text-white dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-300 dark:hover:text-slate-900"
+              ) : (
+                "dark:text-slate-300 dark:hover:text-white"
+              )
+            )}
+            onClick={() => setSelectedPeriod('1M')}
+          >
+            1M
+          </Button>
+          <Button 
+            variant={selectedPeriod === '1W' ? 'default' : 'ghost'} 
+            size="sm"
+            className={cn(
+              "h-6 px-2 text-xs rounded-l-none shadow-none",
+              selectedPeriod === '1W' ? (
+                "bg-slate-900 text-white hover:bg-slate-800 hover:text-white dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-300 dark:hover:text-slate-900"
+              ) : (
+                "dark:text-slate-300 dark:hover:text-white"
+              )
+            )}
+            onClick={() => setSelectedPeriod('1W')}
+          >
+            1W
+          </Button>
         </div>
-        {Icon ? (
-          <Icon className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          isPositive ? 
-            <TrendingUp className="h-4 w-4 text-green-500" /> : 
-            <TrendingDown className="h-4 w-4 text-red-500" />
-        )}
       </CardHeader>
-      <CardContent className="pt-1">
-        <div className="flex flex-col space-y-2">
+      <CardContent className="p-3 pt-0">
+        <div className="flex flex-col space-y-1">
           <div className="flex items-baseline">
             {currency && (
-              <span className="text-base font-medium text-muted-foreground mr-1">
-                {currency === 'LKR' ? 'Rs.' : '$'}
+              <span className={cn(
+                "mr-1",
+                isNegativeValue ? "text-red-600 dark:text-red-500" : "text-slate-500 dark:text-slate-400"
+              )}>
+                {isNegativeValue ? "-" : ""}Rs.
               </span>
-            )}
-            <span className="text-2xl font-semibold">
-              {formattedValue}
-            </span>
-            {unit && (
-              <span className="text-sm font-medium text-muted-foreground ml-1">
-                {unit}
-              </span>
-            )}
-          </div>
-          
-          {/* Change indicator with color for percentage only */}
-          <div className="flex items-center">
-            {isPositive ? (
-              <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
-            ) : (
-              <ArrowDownRight className="h-4 w-4 text-red-500 mr-1" />
             )}
             <span className={cn(
-              "text-sm font-medium",
-              isPositive ? "text-green-500" : "text-red-500"
+              "text-xl sm:text-2xl font-bold",
+              isNegativeValue && "text-red-600 dark:text-red-500"
             )}>
-              {isPositive ? "+" : "-"}{formattedChangePercentage}
+              {isNegativeValue ? formattedValue.replace(/^-/, '') : formattedValue}
             </span>
-            <span className="text-sm pl-1 font-medium text-muted-foreground">
-              from last {periodMap[change] || 'period'}
+            {unit && (
+              <span className="text-sm text-slate-500 dark:text-slate-400 ml-1">
+                Mn
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center">
+            {isPositive ? (
+              <>
+                <ArrowUpRight size={16} className="text-emerald-600 dark:text-emerald-500" />
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-500">
+                  +{formattedChangePercentage}
+                </span>
+              </>
+            ) : (
+              <>
+                <ArrowDownRight size={16} className="text-red-600 dark:text-red-500" />
+                <span className="text-xs font-semibold text-red-600 dark:text-red-500">
+                  -{formattedChangePercentage}
+                </span>
+              </>
+            )}
+            <span className="text-xs pl-1 text-slate-500 dark:text-slate-400">
+              {periodMap[selectedPeriod]}
             </span>
           </div>
           
-          {/* Sparkline area chart */}
           {showSparkline && chartData.length > 1 && (
-            <div className="h-16 w-full mt-1">
+            <div className="h-14 w-full mt-1">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                  <Area 
+                <AreaChart 
+                  data={chartData} 
+                  margin={{ top: 5, right: 0, left: 0, bottom: 0 }}
+                >
+                  <XAxis dataKey="date" hide />
+                  <YAxis hide />
+                  <Tooltip content={<CustomTooltip />} />
+                  <defs>
+                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                      <stop 
+                        offset="5%" 
+                        stopColor={numericValue < 0 ? "#f87171" : "#34d399"} 
+                        stopOpacity={0.3}
+                      />
+                      <stop 
+                        offset="95%" 
+                        stopColor={numericValue < 0 ? "#fee2e2" : "#bbf7d0"} 
+                        stopOpacity={0.1}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <Area
                     type="monotone"
                     dataKey="value"
-                    stroke={isPositive ? "#10b981" : "#ef4444"}
-                    fill={isPositive ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"}
+                    stroke={numericValue < 0 ? "#dc2626" : "#10b981"}
                     strokeWidth={1.5}
+                    fill="url(#colorValue)"
                     dot={false}
-                    activeDot={false}
-                    isAnimationActive={false}
+                    activeDot={{ 
+                      r: 4, 
+                      strokeWidth: 0, 
+                      fill: numericValue < 0 ? "#dc2626" : "#10b981"
+                    }}
+                    isAnimationActive={true}
                   />
                 </AreaChart>
               </ResponsiveContainer>

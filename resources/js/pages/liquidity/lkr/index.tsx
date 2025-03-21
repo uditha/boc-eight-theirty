@@ -10,6 +10,7 @@ import MarketIndicator from '@/components/MarketIndicator';
 import RepoAnalysis from './RepoAnalysis';
 import DSTAnalysis from './DSTAnalysis';
 import LKRCashFlows from './LKRCashFlows';
+import InformationCard from '@/components/InformationCard';
 
 interface LiquidityRecord {
     record_date: string;
@@ -21,6 +22,11 @@ interface LiquidityRecord {
     opr: number;
     call_rate: number;
     repo_rate: number;
+    awplr: number;
+    awplr_boc: number;
+    awdr: number;
+    awfder: number;
+    awnder: number;
     dst_current_acc: number;
     dst_fund_mgt_acc: number;
     dst_seven_day: number;
@@ -56,7 +62,6 @@ export default function LiquidityLKR({ dailyLiqudityData }: Props) {
 
     const marketLiquidityData = useMemo(() =>
         extractTimeSeriesData(dailyLiqudityData, 'market_liquidity', {
-            days: 10,
             sortDirection: 'asc',
         }),
         [dailyLiqudityData]
@@ -64,7 +69,6 @@ export default function LiquidityLKR({ dailyLiqudityData }: Props) {
 
     const bocLiquidityData = useMemo(() =>
         extractTimeSeriesData(dailyLiqudityData, 'boc_liquidity', {
-            days: 10,
             sortDirection: 'asc',
         }),
         [dailyLiqudityData]
@@ -79,8 +83,7 @@ export default function LiquidityLKR({ dailyLiqudityData }: Props) {
                    Number(record.dst_seven_day || 0) +
                    Number(record.dst_fd || 0)
         }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(-10);
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [dailyLiqudityData]);
 
     
@@ -107,7 +110,6 @@ export default function LiquidityLKR({ dailyLiqudityData }: Props) {
     // Customer Repo Balance
     const customerRepoBalanceData = useMemo(() =>
         extractTimeSeriesData(dailyLiqudityData, 'customer_repo_balance', {
-            days: 14,
             sortDirection: 'asc',
         }),
         [dailyLiqudityData]
@@ -151,30 +153,58 @@ export default function LiquidityLKR({ dailyLiqudityData }: Props) {
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     };
 
+    // policy rates data
+    const policyRates = [
+        {
+          key: 'srr',
+          name: 'SRR',
+          valueType: 'percentage',
+          formatDecimals: 2,
+          data: extractTimeSeriesData(dailyLiqudityData, 'srr', {
+            sortDirection: 'asc',
+          })
+        },
+        {
+          key: 'slfr',
+          name: 'SLFR',
+          valueType: 'percentage',
+          formatDecimals: 2,
+          data: extractTimeSeriesData(dailyLiqudityData, 'slfr', {
+            sortDirection: 'asc',
+          })
+        },
+        {
+          key: 'sdfr',
+          name: 'SDFR',
+          valueType: 'percentage',
+          formatDecimals: 2,
+          data: extractTimeSeriesData(dailyLiqudityData, 'sdfr', {
+            sortDirection: 'asc',
+          })
+        },
+        {
+          key: 'opr',
+          name: 'OPR',
+          valueType: 'percentage',
+          formatDecimals: 2,
+          data: extractTimeSeriesData(dailyLiqudityData, 'opr', {
+            sortDirection: 'asc',
+          })
+        }
+      ]
+
   
     // Interest Rate Metrics
     const interestRateMetrics = [
         {
-            key: 'srr',
-            name: 'SRR',
+            key: 'awplr',
+            name: 'AWPLR',
             valueType: 'percentage' as const,
             formatDecimals: 2
         },
         {
-            key: 'slfr',
-            name: 'SLFR',
-            valueType: 'percentage' as const,
-            formatDecimals: 2
-        },
-        {
-            key: 'sdfr',
-            name: 'SDFR',
-            valueType: 'percentage' as const,
-            formatDecimals: 2
-        },
-        {
-            key: 'opr',
-            name: 'OPR',
+            key: 'awplr_boc',
+            name: 'AWPLR (BOC)',
             valueType: 'percentage' as const,
             formatDecimals: 2
         },
@@ -187,6 +217,24 @@ export default function LiquidityLKR({ dailyLiqudityData }: Props) {
         {
             key: 'repo_rate',
             name: 'Repo Rate',
+            valueType: 'percentage' as const,
+            formatDecimals: 2
+        },
+        {
+            key: 'awdr',
+            name: 'AWDR',
+            valueType: 'percentage' as const,
+            formatDecimals: 2
+        },
+        {
+            key: 'awfdr',
+            name: 'AWFDR',
+            valueType: 'percentage' as const,
+            formatDecimals: 2
+        },
+        {
+            key: 'awndr',
+            name: 'AWNDR',
             valueType: 'percentage' as const,
             formatDecimals: 2
         }
@@ -211,14 +259,14 @@ export default function LiquidityLKR({ dailyLiqudityData }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="LKR Liquidity" />
-            <div className="flex flex-col gap-6 px-4 py-6">
+            <div className="flex flex-col gap-4 px-2 sm:px-4 py-4 sm:py-6">
                 <Heading
-                    title="LKR Liquidity Dashboard"
+                    title="LKR Liquidity"
                     description="View the latest liquidity data for the LKR market"
                 />
 
-                {/* Header Stats - 4 Column Layout */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Header Stats - One column on mobile, two on tablet, four on desktop */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <StatCard 
                         title="Market Liquidity" 
                         data={marketLiquidityData} 
@@ -226,8 +274,7 @@ export default function LiquidityLKR({ dailyLiqudityData }: Props) {
                         decimalPlaces={1}
                         currency="LKR"
                         unit="Mn"
-                        change='1M'
-                        icon={Vault}
+         
                     />
                     <StatCard 
                         title="BOC Liquidity" 
@@ -236,8 +283,7 @@ export default function LiquidityLKR({ dailyLiqudityData }: Props) {
                         decimalPlaces={1}
                         currency="LKR"
                         unit="Mn"
-                        change='1W'
-                        icon={Wallet2}
+                     
                     />
                     <StatCard 
                         title="DST Balance" 
@@ -246,31 +292,26 @@ export default function LiquidityLKR({ dailyLiqudityData }: Props) {
                         decimalPlaces={1}
                         currency="LKR"
                         unit="Mn"
-                        change='1M'
-                        icon={Landmark}
+                       
                     />
-                    <StatCard 
-                        title="Repo Borrowings" 
-                        data={customerRepoBalanceData} 
-                        type='number'
-                        decimalPlaces={1}
-                        currency="LKR"
-                        unit="Mn"
-                        change='1W'
-                        icon={Handshake}
+                    <InformationCard 
+                        title="Policy Rates" 
+                        policyRates={policyRates}
                     />
                 </div>
 
-                {/* Market Rates Indicator with sparklines */}
-                <div className="w-full">
-                    <MarketIndicator 
-                        title="Market Rates" 
-                        liquidityData={marketRatesData}
-                    />
+                {/* Market Rates Indicator with sparklines - Scrollable on small screens */}
+                <div className="w-full overflow-x-auto">
+                    <div className="min-w-full sm:min-w-0">
+                        <MarketIndicator 
+                            title="Market Rates" 
+                            liquidityData={marketRatesData}
+                        />
+                    </div>
                 </div>
 
-                {/* two col */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Stacked on mobile, two columns on larger screens */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <RepoAnalysis data={repoData} />
                     <DSTAnalysis 
                         data={dstBalanceData} 
@@ -278,11 +319,12 @@ export default function LiquidityLKR({ dailyLiqudityData }: Props) {
                     />
                 </div>
 
-                {/* Cashflows */}
-                <div className="w-full">
-                    <LKRCashFlows data={prepareCashFlowData(dailyLiqudityData)} />
+                {/* Cashflows - Full width with horizontal scroll on small screens if needed */}
+                <div className="w-full overflow-x-auto">
+                    <div className="min-w-full sm:min-w-0">
+                        <LKRCashFlows data={prepareCashFlowData(dailyLiqudityData)} />
+                    </div>
                 </div>
-
             </div>
         </AppLayout>
     );

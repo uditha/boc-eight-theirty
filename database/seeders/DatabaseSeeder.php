@@ -37,6 +37,8 @@ class DatabaseSeeder extends Seeder
             FixedIncomeCashflowSeeder::class,
             FixedIncomeDailySeeder::class,
             UsdLkrDailySeeder::class,
+            CorporateDeskSeeder::class,
+            
         ]);
     }
 }

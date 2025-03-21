@@ -22,7 +22,7 @@ class LiqudityFcyDailySeeder extends Seeder
         $date = Carbon::createFromDate(2023, 01, 01);
 
         // Ending date
-        $endDate = Carbon::createFromDate(2025, 2, 28);
+        $endDate = Carbon::createFromDate(2025, 3, 21);
 
         // Base values
         $baseValues = [

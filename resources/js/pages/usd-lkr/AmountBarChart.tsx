@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-interface RateChartProps {
+interface AmountChartProps {
   data: {
     date: string;
-    rate: number;
+    amount: number;
   }[];
   title?: string;
 }
 
-export default function RateChart({ data, title }: RateChartProps) {
+export default function AmountAreaChart({ data, title }: AmountChartProps) {
   // State for the selected time range
   const [timeRange, setTimeRange] = useState('1W');
   
@@ -21,7 +21,7 @@ export default function RateChart({ data, title }: RateChartProps) {
     
     return data.map(item => ({
       date: new Date(item.date),
-      rate: typeof item.rate === 'number' ? item.rate : parseFloat(String(item.rate || 0))
+      amount: typeof item.amount === 'number' ? item.amount : parseFloat(String(item.amount || 0))
     }));
   }, [data]);
   
@@ -59,20 +59,22 @@ export default function RateChart({ data, title }: RateChartProps) {
     const firstDay = filteredData[0];
     const lastDay = filteredData[filteredData.length - 1];
     
-    const rateChange = lastDay.rate - firstDay.rate;
-    const rateChangePercent = (rateChange / firstDay.rate * 100).toFixed(2);
+    const amountChange = lastDay.amount - firstDay.amount;
+    const amountChangePercent = (amountChange / firstDay.amount * 100).toFixed(2);
     
-    const avgRate = filteredData.reduce((sum, item) => sum + item.rate, 0) / filteredData.length;
-    const maxRate = Math.max(...filteredData.map(item => item.rate));
-    const minRate = Math.min(...filteredData.map(item => item.rate));
+    const totalAmount = filteredData.reduce((sum, item) => sum + item.amount, 0);
+    const avgAmount = totalAmount / filteredData.length;
+    const maxAmount = Math.max(...filteredData.map(item => item.amount));
+    const minAmount = Math.min(...filteredData.map(item => item.amount));
     
     return {
-      rateChange,
-      rateChangePercent,
-      avgRate: avgRate.toFixed(2),
-      maxRate: maxRate.toFixed(2),
-      minRate: minRate.toFixed(2),
-      lastRate: lastDay.rate.toFixed(2)
+      amountChange,
+      amountChangePercent,
+      totalAmount: totalAmount.toFixed(2),
+      avgAmount: avgAmount.toFixed(2),
+      maxAmount: maxAmount.toFixed(2),
+      minAmount: minAmount.toFixed(2),
+      lastAmount: lastDay.amount.toFixed(2)
     };
   }, [filteredData]);
   
@@ -80,16 +82,16 @@ export default function RateChart({ data, title }: RateChartProps) {
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      const rateValue = data.rate;
+      const amountValue = data.amount;
       
-      // Determine color based on rate compared to average
-      let rateColor = "text-blue-500 dark:text-blue-400";
+      // Determine color based on amount compared to average
+      let amountColor = "text-blue-500 dark:text-blue-400";
       
       if (stats) {
-        if (rateValue < parseFloat(stats.avgRate)) {
-          rateColor = "text-red-500 dark:text-red-400";
-        } else if (rateValue > parseFloat(stats.avgRate)) {
-          rateColor = "text-emerald-500 dark:text-emerald-400";
+        if (amountValue < parseFloat(stats.avgAmount)) {
+          amountColor = "text-red-500 dark:text-red-400";
+        } else if (amountValue > parseFloat(stats.avgAmount)) {
+          amountColor = "text-emerald-500 dark:text-emerald-400";
         }
       }
       
@@ -101,8 +103,8 @@ export default function RateChart({ data, title }: RateChartProps) {
               'Unknown date'}
           </p>
           <div className="grid gap-y-1">
-            <p className={`${rateColor} flex justify-between`}>
-              Rate: <span className="font-medium ml-2">{typeof rateValue === 'number' ? rateValue.toFixed(2) : rateValue}</span>
+            <p className={`${amountColor} flex justify-between`}>
+              Amount: <span className="font-medium ml-2">${typeof amountValue === 'number' ? amountValue.toFixed(2) : amountValue}</span>
             </p>
           </div>
         </div>
@@ -120,6 +122,16 @@ export default function RateChart({ data, title }: RateChartProps) {
     });
   };
 
+  // Format currency for display
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
   if (!data || !Array.isArray(data) || data.length === 0) {
     return (
       <div className="w-full p-4 bg-card rounded-lg border border-border shadow-sm flex items-center justify-center h-52 md:h-64">
@@ -132,12 +144,12 @@ export default function RateChart({ data, title }: RateChartProps) {
     <div className="w-full p-4 bg-card rounded-lg border border-border shadow-sm">
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="text-base font-semibold">{title || 'Exchange Rate Chart'}</h2>
+          <h2 className="text-base font-semibold">{title || 'Amount Area Chart'}</h2>
           {stats && (
             <div className="flex text-xs space-x-3 text-muted-foreground mt-1">
-              <span>Min: <span className="text-red-500 dark:text-red-400 font-medium">{stats.minRate}</span></span>
-              <span>Avg: <span className="text-blue-500 dark:text-blue-400 font-medium">{stats.avgRate}</span></span>
-              <span>Max: <span className="text-emerald-500 dark:text-emerald-400 font-medium">{stats.maxRate}</span></span>
+              <span>Min: <span className="text-red-500 dark:text-red-400 font-medium">${stats.minAmount}</span></span>
+              <span>Avg: <span className="text-blue-500 dark:text-blue-400 font-medium">${stats.avgAmount}</span></span>
+              <span>Max: <span className="text-emerald-500 dark:text-emerald-400 font-medium">${stats.maxAmount}</span></span>
             </div>
           )}
         </div>
@@ -162,15 +174,15 @@ export default function RateChart({ data, title }: RateChartProps) {
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-secondary/30 p-3 rounded">
             <p className="text-xs text-muted-foreground">Change ({timeRange})</p>
-            <p className={`text-sm font-semibold ${stats.rateChange >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-              {stats.rateChange >= 0 ? '+' : ''}{stats.rateChange.toFixed(2)} 
-              <span className="text-xs ml-1">({stats.rateChangePercent}%)</span>
+            <p className={`text-sm font-semibold ${stats.amountChange >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+              {stats.amountChange >= 0 ? '+' : ''}{formatCurrency(parseFloat(stats.amountChange.toFixed(2)))}
+              <span className="text-xs ml-1">({stats.amountChangePercent}%)</span>
             </p>
           </div>
           <div className="bg-secondary/30 p-3 rounded">
-            <p className="text-xs text-muted-foreground">Latest Rate</p>
+            <p className="text-xs text-muted-foreground">Total Amount</p>
             <p className="text-sm font-semibold">
-              {stats.lastRate}
+              {formatCurrency(parseFloat(stats.totalAmount))}
             </p>
           </div>
         </div>
@@ -179,10 +191,16 @@ export default function RateChart({ data, title }: RateChartProps) {
       <div className="h-56 md:h-72">
         {filteredData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
+            <AreaChart
               data={filteredData}
               margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
             >
+              <defs>
+                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--chart-3)" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="var(--chart-3)" stopOpacity={0.2} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border/20" vertical={false} />
               <XAxis 
                 dataKey="date" 
@@ -200,18 +218,19 @@ export default function RateChart({ data, title }: RateChartProps) {
                 axisLine={false}
                 className="text-muted-foreground" 
                 width={40}
+                tickFormatter={(value) => `$${value}`}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Line
+              <Area
                 type="monotone"
-                dataKey="rate"
-                name="Rate"
-                stroke="var(--chart-1, #2563eb)"
-                strokeWidth={2.5}
-                dot={false}
-                activeDot={{ r: 6, strokeWidth: 0 }}
+                dataKey="amount"
+                name="Amount"
+                stroke="var(--chart-3, #398bf7)"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#colorAmount)"
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         ) : (
           <div className="flex items-center justify-center h-full">
